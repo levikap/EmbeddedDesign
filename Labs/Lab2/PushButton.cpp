@@ -122,13 +122,17 @@ void Write1Led(char *pBase,int ledNum, int state)
 
     // read the current value of the led
     int curState = RegisterRead(pBase, LEDR_BASE);
-    // if the LED is on and it should be off, set the value to 0
-    if(curState == value && state == 0) {
-      value = 0;
+    // // if the LED is on and it should be off, set the value to 0
+    // if(curState == value && state == 0) {
+    //   value = 0;
+    // }
+    if(state == 1) {
+      curState = curState | value;
+    } else {
+      curState = (curState | value) ^ value;
     }
-
     // write the value to the board
-    WriteAllLeds(pBase, value);
+    WriteAllLeds(pBase, curState);
 }
 
 
@@ -209,12 +213,17 @@ bool ReadSwitchHelper(int switchNum, int curSwitchValues) {
    }
  }
 
+/*
+ * Gets the value of all the push buttons that have been pressed.
+ * @param pBase - Base address returned by 'mmap'
+ */
 int PushButtonGet(char *pBase) {
   return ReadAllButtons(pBase);
 }
 
 /*
  * Increments the value of the LEDs by one, and displays the updated LEDs.
+ * @param pBase - Base address returned by 'mmap'
  */
 void IncrementLeds(char *pBase) {
   cout << "Incrementing..." << endl;
@@ -226,6 +235,7 @@ void IncrementLeds(char *pBase) {
 
 /*
  * Decrements the value of the LEDs by one, and displays the updated LEDs.
+ * @param pBase - Base address returned by 'mmap'
  */
 void DecrementLeds(char *pBase) {
   cout << "Decrementing..." << endl;
@@ -237,6 +247,7 @@ void DecrementLeds(char *pBase) {
 
 /*
  * Shifts the value of the LEDs by one to the right, inserting a 0 bit on the far left of the binary.
+ * @param pBase - Base address returned by 'mmap'
  */
 void ShiftRight(char *pBase) {
   cout << "Shifting right..." << endl;
@@ -248,6 +259,7 @@ void ShiftRight(char *pBase) {
 
 /*
  * Shifts the value of the LEDs by one to the left, inserting a 0 bit on the far right of the binary.
+ * @param pBase - Base address returned by 'mmap'
  */
 void ShiftLeft(char *pBase) {
   cout << "Shifting left..." << endl;
@@ -259,28 +271,43 @@ void ShiftLeft(char *pBase) {
 
 /*
  * Handles the different cases for the values when the push buttons are pressed
- * @Param buttonValue - the value of the button being pressed
+ * @param pBase - Base address returned by 'mmap'
+ * @param buttonValue - the value of the button that has been pressed
  */
 void HandlePushButtons(char *pBase, int buttonValue) {
+  // if the button's value is 0, don't do anything
   if (buttonValue != 0) {
+    // if the value is 1, run the IncrementLeds function
     if(buttonValue == 1) {
       IncrementLeds(pBase);
+    // if the value is 2, run the DecrementLeds function
     } else if (buttonValue == 2) {
       DecrementLeds(pBase);
+    // if the value is 4, run the ShiftRight function
     } else if (buttonValue == 4) {
       ShiftRight(pBase);
+    // if the value is 8, run the ShiftLeft function
     } else if (buttonValue == 8) {
       ShiftLeft(pBase);
+    // otherwise, output an error but keep going
     } else {
       cout << "error" << endl;
     }
   }
 }
 
-void PushButtonHandler(char *pBase) {
+/*
+ * Detects whether a push button has been changed - either a new button has been pressed,
+ * or a button has been let go of.
+ * @param pBase - Base address returned by 'mmap'
+ */
+void DetectPushButtonChange(char *pBase) {
+  // get the current button values
   int newButtonValues = PushButtonGet(pBase);
+  // if there's been a change, set the new value of the buttons
   if(newButtonValues != buttonValues) {
     buttonValues = newButtonValues;
+    // handle the button press properly
     HandlePushButtons(pBase, newButtonValues);
   }
 }
@@ -290,7 +317,8 @@ int main()
   // Initialize
   int fd;
   char *pBase = Initialize(&fd);
+  // detect push button changes
   while(true) {
-    PushButtonHandler(pBase);
+    DetectPushButtonChange(pBase);
   }
 }

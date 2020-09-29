@@ -121,13 +121,17 @@ void Write1Led(char *pBase,int ledNum, int state)
 
     // read the current value of the led
     int curState = RegisterRead(pBase, LEDR_BASE);
-    // if the LED is on and it should be off, set the value to 0
-    if(curState == value && state == 0) {
-      value = 0;
+    // // if the LED is on and it should be off, set the value to 0
+    // if(curState == value && state == 0) {
+    //   value = 0;
+    // }
+    if(state == 1) {
+      curState = curState | value;
+    } else {
+      curState = (curState | value) ^ value;
     }
-
     // write the value to the board
-    WriteAllLeds(pBase, value);
+    WriteAllLeds(pBase, curState);
 }
 
 
